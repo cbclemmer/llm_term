@@ -6,8 +6,9 @@ import subprocess
 from openai import OpenAI
 
 SYSTEM_PROMPT = """
-Your task is turn the users prompt into a usable linux command.
-Surround the command in triple backticks (```) like a code block.
+Your task is turn the users prompt into a usable linux script.
+Surround the script in triple backticks (```) like a code block.
+Be sure to use command arguments instead of telling the user to replace an example name with something appropriate.
 """
 
 config = { }
@@ -61,12 +62,12 @@ def get_command(prompt: str):
 while True:
     prompt = input("Prompt:> ")
     response, cmd = get_command(prompt)
-    if cmd[0] == '\n':
-        cmd = cmd[1:]
     print(response)
     print(f"Command: {cmd}")
-    should_use = input("Use command (Y/N)")
+    should_use = input("Write Script (Y/N)")
     if should_use.lower() == "y":
         with open('exec.sh', 'w') as f:
-            f.write(f'#!/bin/bash\n{cmd}')
-        subprocess.call(['sh', 'exec.sh'])
+            f.write(cmd)
+        should_exec = input("Execute script (Y/N)")
+        if should_exec.lower() == "y":
+            subprocess.call(['sh', 'exec.sh'])
