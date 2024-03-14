@@ -5,10 +5,15 @@ import subprocess
 
 from openai import OpenAI
 
-SYSTEM_PROMPT = """
+BASH_SYSTEM_PROMPT = """
 Your task is turn the users prompt into a usable linux script.
 Surround the script in triple backticks (```) like a code block.
 Be sure to use command arguments instead of telling the user to replace an example name with something appropriate.
+"""
+
+PYTHON_SYSTEM_PROMPT = """
+Your task is to turn the users prompt into a python script.
+Surround your code with triple backticks (```) like a code block.
 """
 
 config = { }
@@ -38,12 +43,12 @@ def capture_code_blocks(text):
     pattern = r"```(.*?)```"
     return re.findall(pattern, text, re.DOTALL)
 
-def get_command(prompt: str):
+def get_script(prompt: str, sys_prompt: str):
     completion = client.chat.completions.create(
         messages=[
             {
                 "role": "system",
-                "content": SYSTEM_PROMPT
+                "content": sys_prompt
             },
             {
                 "role": "user",
@@ -59,9 +64,9 @@ def get_command(prompt: str):
 
     return res, capture_code_blocks(res)[0]
 
-while True:
-    prompt = input("Prompt:> ")
-    response, cmd = get_command(prompt)
+def run_bash_bot():
+    prompt = input("Bash Prompt:> ")
+    response, cmd = get_script(prompt, BASH_SYSTEM_PROMPT)
     print(response)
     print(f"Command: {cmd}")
     should_use = input("Write Script (Y/N)")
@@ -71,3 +76,21 @@ while True:
         should_exec = input("Execute script (Y/N)")
         if should_exec.lower() == "y":
             subprocess.call(['sh', 'exec.sh'])
+
+def run_python_bot():
+    prompt = input("Python Prompt:> ")
+    res, _ = get_script(prompt, PYTHON_SYSTEM_PROMPT)
+    print(res)
+
+while True:
+    print('Select Bot:\n1: Bash script bot\n2: Python script bot')
+    bot = input('Selection: ')
+    try:
+        if int(bot) != 1 and int(bot) !=2:
+            continue
+    except:
+        continue
+    if int(bot) == 1:
+        run_bash_bot()
+    if int(bot) == 2:
+        run_python_bot()
