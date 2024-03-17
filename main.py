@@ -2,6 +2,7 @@ import re
 import os
 import json
 import subprocess
+from typing import List
 
 from openai import OpenAI
 
@@ -14,6 +15,10 @@ Be sure to use command arguments instead of telling the user to replace an examp
 PYTHON_SYSTEM_PROMPT = """
 Your task is to turn the users prompt into a python script.
 Surround your code with triple backticks (```) like a code block.
+"""
+
+ASSISTANT_SYSTEM_PROMPT = """
+You are a helpful assistant
 """
 
 config = { }
@@ -43,26 +48,33 @@ def capture_code_blocks(text):
     pattern = r"```(.*?)```"
     return re.findall(pattern, text, re.DOTALL)
 
-def get_script(prompt: str, sys_prompt: str):
+def get_response(messages: List[object]):
     completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": sys_prompt
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        model="gpt-3.5-turbo",
-        max_tokens=150,
-        temperature=0.2
+        messages=messages,
+        model="gpt-4-1106-preview",
+        max_tokens=1000,
+        temperature=0.5
     )
 
     res = completion.choices[0].message.content
 
-    return res, capture_code_blocks(res)[0]
+    blocks = capture_code_blocks(res)
+    if len(blocks) > 0:
+        return res, blocks[0]
+    else:
+        return res, None
+
+def get_script(prompt: str, sys_prompt: str):
+    return get_response([
+        {
+            "role": "system",
+            "content": sys_prompt
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ])
 
 def run_bash_bot():
     prompt = input("Bash Prompt:> ")
@@ -82,11 +94,35 @@ def run_python_bot():
     res, _ = get_script(prompt, PYTHON_SYSTEM_PROMPT)
     print(res)
 
+def run_assistant():
+    messages = [{
+        "role": "system",
+        "content": ASSISTANT_SYSTEM_PROMPT
+    }]
+    while True:
+        print("########################\n\n")
+        messages.append({
+            "role": "user",
+            "content": input("User: ")
+        })
+        res, _ = get_response(messages)
+        print(f"########################\n\nASSISTANT: {res}")
+        messages.append({
+            "role": "assistant",
+            "content": res
+        })
+
+
 while True:
-    print('Select Bot:\n1: Bash script bot\n2: Python script bot')
+    print("""
+Select Bot:
+1: Bash script bot
+2: Python script bot
+3: General Help
+""")
     bot = input('Selection: ')
     try:
-        if int(bot) != 1 and int(bot) !=2:
+        if int(bot) > 3:
             continue
     except:
         continue
@@ -94,3 +130,5 @@ while True:
         run_bash_bot()
     if int(bot) == 2:
         run_python_bot()
+    if int(bot) == 3:
+        run_assistant()
